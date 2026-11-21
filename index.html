@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 7 – Sharpening, Segmentation and Feature Extraction</title>
+<style>
+:root{
+  --navy:#12263f;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;--bg:#f6f8fb;--card:#ffffff;
+  --teal:#0e9aa7;--teal-d:#0a7480;--orange:#e8651a;--green:#16a34a;--red:#dc2626;--soft:#eef4f8;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.65;font-size:16px}
+header{background:var(--navy);color:#fff;padding:56px 20px 48px;border-bottom:4px solid var(--teal)}
+.wrap{max-width:1040px;margin:0 auto}
+.eyebrow{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:#8fd3da;margin-bottom:10px}
+header h1{font-size:clamp(1.8rem,4.5vw,2.9rem);line-height:1.2;margin:0 0 12px;font-weight:700}
+header p{max-width:680px;color:#c5d2e2;margin:0 0 22px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;font-size:.88rem;color:#a9bad0;border-top:1px solid #2a4263;padding-top:16px}
+.meta b{color:#fff;font-weight:600}
+nav{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:0 12px}
+nav a{white-space:nowrap;padding:14px 14px;color:var(--muted);text-decoration:none;font-size:.9rem;font-weight:500;border-bottom:2px solid transparent;transition:.15s}
+nav a:hover,nav a.on{color:var(--teal-d);border-bottom-color:var(--teal)}
+main{max-width:1040px;margin:0 auto;padding:10px 16px 40px}
+section{margin-top:54px}
+.sec-no{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);font-weight:700}
+h2{font-size:1.75rem;margin:2px 0 6px;color:var(--navy);font-weight:700}
+.lead{color:var(--muted);max-width:760px;margin:0 0 16px}
+h3{font-size:1.05rem;margin:26px 0 8px;color:var(--navy);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;margin-top:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.item{background:var(--soft);border-left:3px solid var(--teal);border-radius:6px;padding:12px 14px;font-size:.95rem}
+.item b{display:block;color:var(--navy);margin-bottom:2px}
+.item.o{border-left-color:var(--orange)}
+.callout{background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid var(--orange);border-radius:6px;padding:11px 14px;margin:14px 0;font-size:.93rem;color:#7c3a10}
+.callout.info{background:#ecfeff;border-color:#a5f3fc;border-left-color:var(--teal);color:#134e4a}
+.panel{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-top:14px}
+.ctrl{display:flex;gap:14px 20px;flex-wrap:wrap;align-items:center;margin:14px 0;padding:12px 14px;background:var(--soft);border:1px solid var(--line);border-radius:10px;font-size:.9rem}
+.ctrl label{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:500}
+select,button{font:inherit;font-size:.9rem;border-radius:8px;padding:7px 14px;cursor:pointer}
+select{border:1px solid #cbd5e1;background:#fff;color:var(--ink)}
+button{border:1px solid var(--teal);background:var(--teal);color:#fff;font-weight:600;transition:.15s}
+button:hover{background:var(--teal-d);border-color:var(--teal-d)}
+button.ghost{background:#fff;color:var(--teal-d)}
+button.ghost:hover{background:var(--soft)}
+input[type=range]{accent-color:var(--teal);width:150px}
+.val{font-variant-numeric:tabular-nums;min-width:2.2em;display:inline-block;color:var(--teal-d);font-weight:600}
+.row{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+figure{margin:0;text-align:center}
+figcaption{font-size:.83rem;color:var(--muted);margin-top:8px}
+figcaption b{color:var(--navy)}
+canvas{background:#0b1220;border:1px solid #cbd5e1;border-radius:6px;max-width:100%;height:auto;image-rendering:pixelated}
+table{border-collapse:collapse;width:100%;font-size:.84rem;margin-top:12px}
+th,td{padding:6px 8px;border:1px solid var(--line);text-align:center}
+th{background:var(--soft);color:var(--navy);font-weight:600}
+code{background:#0f172a;color:#7dd3fc;padding:3px 8px;border-radius:5px;font-size:.84rem;font-family:ui-monospace,Consolas,monospace}
+.opt{display:block;width:100%;text-align:left;margin:8px 0;background:#fff;color:var(--ink);border:1px solid #cbd5e1;font-weight:400}
+.opt:hover{background:var(--soft);border-color:var(--teal)}
+.opt.good{background:#dcfce7;border-color:var(--green);color:#14532d}
+.opt.bad{background:#fee2e2;border-color:var(--red);color:#7f1d1d}
+.bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:18px}
+.bar i{display:block;height:100%;width:0;background:var(--teal);transition:.4s}
+.score{text-align:center;padding:10px}
+.score .n{font-size:2.6rem;font-weight:700;color:var(--navy)}
+.legend{display:flex;gap:16px;justify-content:center;font-size:.82rem;color:var(--muted);margin-top:8px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+footer{background:var(--navy);color:#a9bad0;text-align:center;padding:30px 16px;font-size:.88rem;margin-top:30px}
+footer b{color:#fff}
+@media(max-width:600px){main{padding:6px 12px}.card{padding:16px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Image Processing I &nbsp;·&nbsp; Misr International University</div>
+    <h1>Lab 7: Sharpening, Segmentation and Feature Extraction</h1>
+    <p>An interactive companion to the lab sheet. Each section summarizes the theory and lets you experiment with the technique on a live image.</p>
+    <div class="meta">
+      <span><b>Semester</b> Fall 2025</span>
+      <span><b>Instructor</b> Prof. Alaa Hamdy</span>
+      <span><b>Teaching Assistants</b> Eng. Nourhan Salah, Eng. Menna Medhat</span>
+    </div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#sharp">1 Sharpening</a>
+  <a href="#seg">2 Segmentation</a>
+  <a href="#grow">3 Region Growing</a>
+  <a href="#feat">4 Feature Extraction</a>
+  <a href="#match">5 Feature Matching</a>
+  <a href="#quiz">6 Self-Assessment</a>
+</div></nav>
+
+<main>
+
+<section id="sharp">
+  <div class="sec-no">Section 1</div>
+  <h2>Sharpening and Boundary Detection</h2>
+  <p class="lead">An <b>edge</b> is a boundary between two regions with different pixel intensities. Sharpening emphasizes these sudden changes so that objects stand out from their background. Unlike smoothing, which softens an image, sharpening makes it clearer and crisper.</p>
+  <div class="card">
+    <div class="callout">Excessive sharpening introduces unwanted noise and makes the image look unnatural. Increase the strength to its maximum to observe this effect.</div>
+    <div class="ctrl">
+      <label>Operation
+        <select id="mode">
+          <optgroup label="Sharpening">
+            <option value="sharp">Sharpening (Laplacian)</option>
+          </optgroup>
+          <optgroup label="Boundary-based segmentation">
+            <option value="point">Point detection (Laplacian + threshold)</option>
+            <option value="hline">Line detection, horizontal</option>
+            <option value="vline">Line detection, vertical</option>
+            <option value="d45">Line detection, 45°</option>
+            <option value="d135">Line detection, 135°</option>
+            <option value="sobel">Edge detection, Sobel (first derivative)</option>
+            <option value="lap">Edge detection, Laplacian (second derivative)</option>
+          </optgroup>
+          <optgroup label="Region-based segmentation">
+            <option value="thr">Thresholding, single</option>
+            <option value="thr2">Thresholding, dual</option>
+          </optgroup>
+        </select>
+      </label>
+      <label>Strength / threshold <input type="range" id="amt" min="0" max="100" value="40"><span class="val" id="amtv">40</span></label>
+      <button id="regen" class="ghost">Generate new image</button>
+    </div>
+    <div class="row">
+      <figure><canvas id="cOrig" width="220" height="220"></canvas><figcaption><b>Figure 1a.</b> Original (blurred, noisy)</figcaption></figure>
+      <figure><canvas id="cOut" width="220" height="220"></canvas><figcaption id="outLabel"><b>Figure 1b.</b> Result</figcaption></figure>
+    </div>
+    <div id="modeInfo" class="panel"></div>
+  </div>
+</section>
+
+<section id="seg">
+  <div class="sec-no">Section 2</div>
+  <h2>Image Segmentation</h2>
+  <p class="lead">Segmentation divides an image into smaller, meaningful regions to make it easier to analyze and understand.</p>
+  <div class="card">
+    <h3 style="margin-top:0">Why segment an image?</h3>
+    <div class="grid">
+      <div class="item">Separate objects from the background</div>
+      <div class="item">Identify different objects in an image</div>
+      <div class="item">Analyze specific regions instead of the whole image</div>
+      <div class="item">Prepare images for further processing, such as object recognition</div>
+    </div>
+    <h3>Types of segmentation</h3>
+    <div class="grid">
+      <div class="item"><b>Boundary-based</b>Identifies objects by detecting their boundaries: point detection, line detection and edge detection.</div>
+      <div class="item o"><b>Region-based</b>Groups pixels by similarity of intensity, texture or color: thresholding, region growing, and split and merge.</div>
+    </div>
+    <h3>Split and merge</h3>
+    <p class="lead" style="margin-bottom:6px">The image is recursively divided into quadrants until each block is uniform, then adjacent blocks with similar values are merged.</p>
+    <div class="ctrl">
+      <button id="splitBtn">Split</button>
+      <button id="mergeBtn">Merge</button>
+      <button id="resetSM" class="ghost">Reset</button>
+    </div>
+    <div class="row"><figure><canvas id="cSM" width="320" height="320"></canvas><figcaption id="smInfo"><b>Figure 2.</b> Press Split to begin.</figcaption></figure></div>
+  </div>
+</section>
+
+<section id="grow">
+  <div class="sec-no">Section 3</div>
+  <h2>Region Growing</h2>
+  <p class="lead">Growth starts from a seed point and adds neighboring pixels that satisfy a similarity condition. It stops when no more pixels meet the criterion. Click anywhere on the grid to plant a seed.</p>
+  <div class="card">
+    <div class="ctrl">
+      <label><input type="radio" name="conn" value="4" checked> N4 connectivity</label>
+      <label><input type="radio" name="conn" value="8"> N8 connectivity</label>
+      <label>Tolerance <input type="range" id="tol" min="1" max="120" value="30"><span class="val" id="tolv">30</span></label>
+      <button id="clearGrow" class="ghost">Clear</button>
+    </div>
+    <div class="row"><figure><canvas id="cGrow" width="400" height="400" style="cursor:crosshair"></canvas><figcaption id="growInfo"><b>Figure 3.</b> Click a cell to set the seed.</figcaption></figure></div>
+    <div class="callout info">N4 checks the top, bottom, left and right neighbors. N8 also checks the four diagonals. With a large tolerance, the region leaks into neighboring objects.</div>
+  </div>
+</section>
+
+<section id="feat">
+  <div class="sec-no">Section 4</div>
+  <h2>Feature Extraction</h2>
+  <p class="lead">Feature extraction detects and describes distinctive elements of an image (corners, edges, textures, shapes and patterns) and turns raw pixels into compact, informative representations.</p>
+  <div class="card">
+    <div class="grid">
+      <div class="item"><b>Keypoints</b>Indicate <u>where</u> interesting features are located: corners, intersections and blobs.</div>
+      <div class="item o"><b>Descriptors</b>Numerical representations of the region around each keypoint, describing <u>what</u> it looks like.</div>
+    </div>
+    <div class="callout info">Example, recognizing a person. Keypoint: the location of the eyes, nose and mouth. Descriptor: the shape and surrounding appearance at those locations.</div>
+    <h3>Interactive demo: keypoints and descriptors</h3>
+    <div class="ctrl">
+      <label>Sensitivity <input type="range" id="ksens" min="1" max="100" value="55"></label>
+      <button id="kbtn" class="ghost">Generate new shapes</button>
+    </div>
+    <div class="row"><figure><canvas id="cKey" width="420" height="300" style="cursor:pointer"></canvas><figcaption id="kinfo"><b>Figure 4a.</b></figcaption></figure></div>
+    <div class="panel" id="descPanel">
+      <div class="row" style="align-items:center">
+        <figure>
+          <canvas id="cPatch" width="160" height="160"></canvas>
+          <figcaption><b>Figure 4b.</b> 16×16 patch around the selected keypoint</figcaption>
+        </figure>
+        <figure>
+          <canvas id="cDesc" width="160" height="160" style="background:#fff"></canvas>
+          <figcaption><b>Figure 4c.</b> Descriptor: 4×4 cells × 8 orientations</figcaption>
+        </figure>
+        <div id="descText" style="flex:1;min-width:240px;font-size:.92rem"></div>
+      </div>
+    </div>
+    <h3>Process</h3>
+    <div class="grid">
+      <div class="item"><b>1. Keypoint detection</b>Identify interesting locations in the image.</div>
+      <div class="item"><b>2. Descriptor computation</b>Convert the local region into numerical values.</div>
+      <div class="item"><b>3. Feature matching</b>Compare descriptors from different images.</div>
+    </div>
+    <h3>Common methods</h3>
+    <div class="grid">
+      <div class="item"><b>SIFT</b>Scale and rotation invariant. Used for object recognition and 3D modeling.</div>
+      <div class="item"><b>SURF</b>A faster alternative to SIFT, robust and efficient.</div>
+      <div class="item"><b>ORB</b>FAST detector with BRIEF descriptors. Suitable for real-time use.</div>
+      <div class="item"><b>BRISK and AKAZE</b>Efficient binary descriptors, robust to scale and rotation.</div>
+      <div class="item"><b>HOG, FAST, FREAK</b>Shape descriptor, corner detector and retina-inspired descriptor.</div>
+    </div>
+  </div>
+</section>
+
+<section id="match">
+  <div class="sec-no">Section 5</div>
+  <h2>Feature Matching and the Brute-Force Matcher</h2>
+  <p class="lead">Extraction answers "What features does this image have?" Matching answers "Which features correspond to those in another image?" The Brute-Force Matcher compares every descriptor of the first image with every descriptor of the second and selects the closest one.</p>
+  <div class="card">
+    <table>
+      <tr><th>Feature extraction</th><th>Feature matching</th></tr>
+      <tr><td>Identifies important features in an image</td><td>Finds corresponding features between images</td></tr>
+      <tr><td>Detects keypoints and computes descriptors</td><td>Compares descriptors and calculates distances</td></tr>
+    </table>
+    <div class="grid" style="margin-top:14px">
+      <div class="item">Small distance means the descriptors are more similar.</div>
+      <div class="item">Large distance means the descriptors are less similar.</div>
+      <div class="item">Euclidean distance for float descriptors (SIFT, SURF). Hamming distance for binary descriptors (ORB).</div>
+    </div>
+    <h3>Interactive demo: BFMatcher with 16-bit binary descriptors</h3>
+    <div class="ctrl">
+      <label>Noise in image B (bits flipped) <input type="range" id="noise" min="0" max="8" value="2"><span class="val" id="noisev">2</span></label>
+      <button id="runBF">Run BFMatcher</button>
+      <button id="newBF" class="ghost">New descriptors</button>
+    </div>
+    <div class="row"><figure><canvas id="cMatch" width="640" height="300" style="background:#fff"></canvas><figcaption id="matchInfo"><b>Figure 5.</b> Descriptors of image A (left) and image B (right).</figcaption></figure></div>
+    <div class="legend"><span><i class="dot" style="background:var(--green)"></i>Correct match</span><span><i class="dot" style="background:var(--red)"></i>Incorrect match</span></div>
+    <table id="distTable"></table>
+    <p style="margin-bottom:0"><code>cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True).match(des1, des2)</code></p>
+  </div>
+</section>
+
+<section id="quiz">
+  <div class="sec-no">Section 6</div>
+  <h2>Self-Assessment</h2>
+  <p class="lead">Ten questions covering the lab. Select an answer to see immediate feedback.</p>
+  <div class="card">
+    <div class="bar"><i id="qbar"></i></div>
+    <div id="qbox"></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <b>Image Processing I · Lab 7</b><br>
+  Prof. Alaa Hamdy · Eng. Nourhan Salah · Eng. Menna Medhat · Misr International University · Fall 2025
+</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const clamp=v=>v<0?0:v>255?255:v;
+
+/* highlight active nav link */
+const links=[...document.querySelectorAll('nav a')];
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.toggle('on',l.getAttribute('href')==='#'+e.target.id))}}),{rootMargin:'-40% 0px -55% 0px'});
+document.querySelectorAll('section').forEach(s=>io.observe(s));
+
+/* ---------- 1. image playground ---------- */
+const W=220,H=220; let img=new Float32Array(W*H);
+function conv(a,k,div=1,bias=0){
+  const o=new Float32Array(W*H);
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+    let s=0,n=0;
+    for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)s+=a[(y+j)*W+x+i]*k[n++];
+    o[y*W+x]=s/div+bias;
+  }
+  return o;
+}
+function makeImage(seed){
+  const r=rng(seed),off=document.createElement('canvas');off.width=W;off.height=H;
+  const g=off.getContext('2d');g.fillStyle='#464646';g.fillRect(0,0,W,H);g.fillStyle='#e0e0e0';
+  for(let i=0;i<55;i++){g.save();g.translate(r()*W,r()*H);g.rotate(r()*Math.PI);g.beginPath();g.ellipse(0,0,14+r()*6,4+r()*2,0,0,7);g.fill();g.restore()}
+  const d=g.getImageData(0,0,W,H).data,a=new Float32Array(W*H);
+  for(let i=0;i<W*H;i++)a[i]=d[i*4];
+  let b=conv(a,[1,2,1,2,4,2,1,2,1],16);b=conv(b,[1,2,1,2,4,2,1,2,1],16);
+  for(let i=0;i<W*H;i++)b[i]=clamp(b[i]+(r()-.5)*14);
+  for(let k=0;k<8;k++){const x=5+Math.floor(r()*(W-10)),y=5+Math.floor(r()*(H-10));b[y*W+x]=255}
+  return b;
+}
+function draw(cv,a,norm){
+  const c=cv.getContext('2d'),id=c.createImageData(W,H);let mx=1;
+  if(norm){mx=0;for(const v of a)mx=Math.max(mx,v)}
+  for(let i=0;i<W*H;i++){const v=norm?clamp(a[i]/mx*255):clamp(a[i]);id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=v;id.data[i*4+3]=255}
+  c.putImageData(id,0,0);
+}
+const infoText={
+  sharp:'<b>Sharpening.</b> The Laplacian (edge) response is combined with the original image. The slider controls how much edge information is added back.',
+  sobel:'<b>Sobel</b> is a first-derivative method. It highlights the gradient magnitude, so edges appear bright.',
+  lap:'<b>Laplacian</b> is a second-derivative method. It responds to rapid intensity change; zero-crossings correspond to edge locations.',
+  point:'<b>Point detection.</b> A Laplacian mask is applied, then the response is compared with a threshold. Isolated bright pixels are detected.',
+  hline:'<b>Horizontal line mask</b> [-1 -1 -1; 2 2 2; -1 -1 -1]. Enhances horizontal structures and suppresses other orientations.',
+  vline:'<b>Vertical line mask</b> [-1 2 -1; -1 2 -1; -1 2 -1]. Enhances vertical structures.',
+  d45:'<b>45° line mask.</b> Enhances thin lines running along the 45° diagonal.',
+  d135:'<b>135° line mask.</b> Enhances thin lines running along the 135° diagonal.',
+  thr:'<b>Single threshold.</b> Pixels above T become foreground (white), the rest become background (black). Works best when objects and background have distinct intensity levels.',
+  thr2:'<b>Dual thresholding.</b> Two thresholds produce three regions: dark, medium and bright.'
+};
+const masks={hline:[-1,-1,-1,2,2,2,-1,-1,-1],vline:[-1,2,-1,-1,2,-1,-1,2,-1],d45:[-1,-1,2,-1,2,-1,2,-1,-1],d135:[2,-1,-1,-1,2,-1,-1,-1,2],lap:[0,1,0,1,-4,1,0,1,0]};
+function update(){
+  const m=$('mode').value,t=+$('amt').value;$('amtv').textContent=t;
+  $('modeInfo').innerHTML=infoText[m];$('outLabel').innerHTML='<b>Figure 1b.</b> Result';
+  let out;
+  if(m==='sharp'){const l=conv(img,masks.lap);out=new Float32Array(W*H);for(let i=0;i<W*H;i++)out[i]=img[i]-l[i]*(t/40);draw($('cOut'),out,false)}
+  else if(m==='sobel'){const gx=conv(img,[-1,0,1,-2,0,2,-1,0,1]),gy=conv(img,[-1,-2,-1,0,0,0,1,2,1]);out=gx.map((v,i)=>Math.hypot(v,gy[i]));draw($('cOut'),out.map(v=>v*(t/30)),true)}
+  else if(m==='lap'){out=conv(img,masks.lap).map(Math.abs);draw($('cOut'),out.map(v=>v*(t/30)),true)}
+  else if(m==='point'){const l=conv(img,[-1,-1,-1,-1,8,-1,-1,-1,-1]).map(Math.abs);out=l.map(v=>v>t*5?255:0);draw($('cOut'),out,false);$('outLabel').innerHTML='<b>Figure 1b.</b> Result: '+out.filter(v=>v).length+' pixels detected'}
+  else if(m==='thr'){out=img.map(v=>v>t*2.55?255:0);draw($('cOut'),out,false)}
+  else if(m==='thr2'){const T1=t*1.6,T2=t*2.55;out=img.map(v=>v<T1?0:v<T2?128:255);draw($('cOut'),out,false)}
+  else{out=conv(img,masks[m]).map(v=>Math.max(0,v));draw($('cOut'),out.map(v=>v*(t/30)),true)}
+}
+function regen(){img=makeImage(Math.floor(Math.random()*1e6));draw($('cOrig'),img,false);update()}
+$('mode').onchange=update;$('amt').oninput=update;$('regen').onclick=regen;regen();
+
+/* ---------- split & merge ---------- */
+const SM=$('cSM'),sg=SM.getContext('2d');let smImg,smRegions,smStage;
+function smInit(){
+  const r=rng(7),N=64;smImg=[];
+  for(let y=0;y<N;y++){smImg[y]=[];for(let x=0;x<N;x++){let v=60;if((x-20)**2+(y-22)**2<250)v=200;if(x>40&&y>38&&x<60&&y<58)v=130;smImg[y][x]=v+(r()-.5)*10}}
+  smRegions=[{x:0,y:0,s:N}];smStage='init';drawSM();$('smInfo').innerHTML='<b>Figure 2.</b> Press Split to begin.';
+}
+function smStats(q){let mn=999,mx=-1,sum=0;for(let y=q.y;y<q.y+q.s;y++)for(let x=q.x;x<q.x+q.s;x++){const v=smImg[y][x];mn=Math.min(mn,v);mx=Math.max(mx,v);sum+=v}return{u:mx-mn<45,m:sum/(q.s*q.s)}}
+function drawSM(){
+  const k=SM.width/64;
+  for(let y=0;y<64;y++)for(let x=0;x<64;x++){const v=smImg[y][x];sg.fillStyle=`rgb(${v},${v},${v})`;sg.fillRect(x*k,y*k,k+1,k+1)}
+  if(smStage==='merged'){const cols=['#0e9aa7','#e8651a','#16a34a'];smRegions.forEach(q=>{const m=smStats(q).m,c=m>170?cols[1]:m>100?cols[2]:cols[0];sg.fillStyle=c+'bb';sg.fillRect(q.x*k,q.y*k,q.s*k,q.s*k)})}
+  else{sg.strokeStyle='#f59e0b';sg.lineWidth=1.2;smRegions.forEach(q=>sg.strokeRect(q.x*k+.5,q.y*k+.5,q.s*k-1,q.s*k-1))}
+}
+$('splitBtn').onclick=()=>{
+  let changed=false,next=[];
+  smRegions.forEach(q=>{if(!smStats(q).u&&q.s>2){const h=q.s/2;next.push({x:q.x,y:q.y,s:h},{x:q.x+h,y:q.y,s:h},{x:q.x,y:q.y+h,s:h},{x:q.x+h,y:q.y+h,s:h});changed=true}else next.push(q)});
+  smRegions=next;smStage='split';drawSM();
+  $('smInfo').innerHTML='<b>Figure 2.</b> '+(changed?smRegions.length+' blocks. Press Split again until every block is uniform.':'All '+smRegions.length+' blocks are uniform. Press Merge.');
+};
+$('mergeBtn').onclick=()=>{smStage='merged';drawSM();$('smInfo').innerHTML='<b>Figure 2.</b> Similar adjacent blocks merged into three regions: background, circle and square.'};
+$('resetSM').onclick=smInit;smInit();
+
+/* ---------- region growing ---------- */
+const GN=20,GC=$('cGrow'),gg=GC.getContext('2d'),cs=GC.width/GN;let grid=[],region=null,grTimer=null;
+(function(){const r=rng(11);for(let y=0;y<GN;y++){grid[y]=[];for(let x=0;x<GN;x++){let v=40;if((x-6)**2+(y-6)**2<22)v=130;if((x-14)**2+(y-13)**2<30)v=220;if(x>=1&&x<=4&&y>=14&&y<=18)v=90;grid[y][x]=Math.round(v+(r()-.5)*24)}}})();
+function drawGrid(){
+  for(let y=0;y<GN;y++)for(let x=0;x<GN;x++){
+    const v=grid[y][x];gg.fillStyle=`rgb(${v},${v},${v})`;gg.fillRect(x*cs,y*cs,cs,cs);
+    if(region&&region.has(y*GN+x)){gg.fillStyle='rgba(22,163,74,.62)';gg.fillRect(x*cs,y*cs,cs,cs)}
+    gg.strokeStyle='rgba(255,255,255,.12)';gg.strokeRect(x*cs,y*cs,cs,cs);
+  }
+}
+GC.onclick=e=>{
+  const b=GC.getBoundingClientRect(),x=Math.floor((e.clientX-b.left)/b.width*GN),y=Math.floor((e.clientY-b.top)/b.height*GN);
+  clearInterval(grTimer);region=new Set([y*GN+x]);const seedV=grid[y][x],tol=+$('tol').value;
+  const n8=document.querySelector('input[name=conn]:checked').value==='8';
+  const dirs=n8?[[0,1],[1,0],[0,-1],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]:[[0,1],[1,0],[0,-1],[-1,0]];
+  let front=[[x,y]];drawGrid();
+  grTimer=setInterval(()=>{
+    const nf=[];
+    for(const[cx,cy]of front)for(const[dx,dy]of dirs){const nx=cx+dx,ny=cy+dy;if(nx<0||ny<0||nx>=GN||ny>=GN||region.has(ny*GN+nx))continue;if(Math.abs(grid[ny][nx]-seedV)<tol){region.add(ny*GN+nx);nf.push([nx,ny])}}
+    drawGrid();$('growInfo').innerHTML='<b>Figure 3.</b> Seed value '+seedV+', region size '+region.size+' pixels'+(nf.length?'':' (growth complete)');
+    if(!nf.length)clearInterval(grTimer);front=nf;
+  },90);
+};
+$('tol').oninput=()=>$('tolv').textContent=$('tol').value;
+$('clearGrow').onclick=()=>{clearInterval(grTimer);region=null;drawGrid();$('growInfo').innerHTML='<b>Figure 3.</b> Click a cell to set the seed.'};drawGrid();
+
+/* ---------- keypoints + descriptors ---------- */
+function keypoints(regen){
+  const c=$('cKey'),g=c.getContext('2d'),w=c.width,h=c.height,r=rng(Math.floor(Math.random()*1e6));
+  if(!c._shapes||regen){c._shapes=[];c._sel=0;for(let i=0;i<5;i++)c._shapes.push({t:i%3,x:60+r()*300,y:50+r()*200,s:25+r()*25,a:r()*1.2})}
+  g.fillStyle='#202020';g.fillRect(0,0,w,h);g.fillStyle='#eee';
+  c._shapes.forEach(s=>{g.save();g.translate(s.x,s.y);g.rotate(s.a);
+    if(s.t===0)g.fillRect(-s.s,-s.s/1.5,s.s*2,s.s*1.3);
+    else if(s.t===1){g.beginPath();g.moveTo(0,-s.s);g.lineTo(s.s,s.s);g.lineTo(-s.s,s.s);g.fill()}
+    else{g.beginPath();g.moveTo(-s.s,-s.s);g.lineTo(s.s,-s.s);g.lineTo(s.s*.3,s.s);g.lineTo(-s.s,s.s*.4);g.fill()}
+    g.restore()});
+  const d=g.getImageData(0,0,w,h).data,gr=new Float32Array(w*h);for(let i=0;i<w*h;i++)gr[i]=d[i*4];
+  const R=new Float32Array(w*h);let mx=0;
+  for(let y=3;y<h-3;y++)for(let x=3;x<w-3;x++){let a=0,b=0,cc=0;for(let j=-2;j<=2;j++)for(let i=-2;i<=2;i++){const p=(y+j)*w+x+i,ix=gr[p+1]-gr[p-1],iy=gr[p+w]-gr[p-w];a+=ix*ix;b+=iy*iy;cc+=ix*iy}R[y*w+x]=a*b-cc*cc-.05*(a+b)**2;mx=Math.max(mx,R[y*w+x])}
+  const th=mx*(1-$('ksens').value/100)*.35+mx*.02,pts=[];
+  for(let y=4;y<h-4;y++)for(let x=4;x<w-4;x++){const v=R[y*w+x];if(v<th)continue;let ok=true;for(let j=-6;j<=6&&ok;j++)for(let i=-6;i<=6;i++)if(R[(y+j)*w+x+i]>v){ok=false;break}if(ok)pts.push([x,y])}
+  c._pts=pts;c._gr=gr;if(c._sel>=pts.length)c._sel=0;
+  pts.forEach(([x,y],i)=>{
+    const on=i===c._sel;
+    g.strokeStyle=on?'#22d3ee':'#f59e0b';g.lineWidth=on?3:2;
+    g.beginPath();g.arc(x,y,on?9:7,0,7);g.stroke();
+    g.fillStyle='#22d3ee';g.fillRect(x-1.5,y-1.5,3,3);
+    g.fillStyle='#fff';g.font='bold 11px sans-serif';g.fillText('K'+(i+1),x+10,y-8);
+  });
+  $('kinfo').innerHTML='<b>Figure 4a.</b> '+pts.length+' keypoints detected. Click a keypoint to view its descriptor.';
+  showDescriptor();
+}
+
+function computeDescriptor(c,kx,ky){
+  const gr=c._gr,w=c.width,h=c.height;let desc=new Float32Array(128);
+  for(let j=0;j<16;j++)for(let i=0;i<16;i++){
+    const x=kx-8+i,y=ky-8+j;
+    if(x<1||y<1||x>=w-1||y>=h-1)continue;
+    const gx=gr[y*w+x+1]-gr[y*w+x-1],gy=gr[(y+1)*w+x]-gr[(y-1)*w+x];
+    const mag=Math.hypot(gx,gy);if(!mag)continue;
+    let ang=Math.atan2(gy,gx);if(ang<0)ang+=2*Math.PI;
+    const bin=Math.min(7,Math.floor(ang/(2*Math.PI)*8));
+    const cell=Math.floor(j/4)*4+Math.floor(i/4);
+    desc[cell*8+bin]+=mag;
+  }
+  let n=Math.hypot(...desc)||1;desc=desc.map(v=>Math.min(v/n,.2));   /* normalize and clip */
+  n=Math.hypot(...desc)||1;return desc.map(v=>v/n);
+}
+
+function showDescriptor(){
+  const c=$('cKey'),p=$('cPatch').getContext('2d'),d=$('cDesc').getContext('2d');
+  p.clearRect(0,0,160,160);d.clearRect(0,0,160,160);
+  if(!c._pts.length){$('descText').innerHTML='No keypoints detected. Increase the sensitivity.';return}
+  const [kx,ky]=c._pts[c._sel],gr=c._gr,w=c.width,h=c.height;
+
+  /* patch */
+  const off=document.createElement('canvas');off.width=16;off.height=16;
+  const oc=off.getContext('2d'),id=oc.createImageData(16,16);
+  for(let j=0;j<16;j++)for(let i=0;i<16;i++){
+    const x=kx-8+i,y=ky-8+j,v=(x>=0&&y>=0&&x<w&&y<h)?gr[y*w+x]:0,k=(j*16+i)*4;
+    id.data[k]=id.data[k+1]=id.data[k+2]=v;id.data[k+3]=255;
+  }
+  oc.putImageData(id,0,0);p.imageSmoothingEnabled=false;p.drawImage(off,0,0,160,160);
+  p.strokeStyle='rgba(245,158,11,.85)';p.lineWidth=1;
+  for(let k=1;k<4;k++){p.beginPath();p.moveTo(k*40,0);p.lineTo(k*40,160);p.moveTo(0,k*40);p.lineTo(160,k*40);p.stroke()}
+
+  /* descriptor visualization */
+  const desc=computeDescriptor(c,kx,ky),mxv=Math.max(...desc)||1;
+  d.strokeStyle='#cbd5e1';d.lineWidth=1;
+  for(let k=0;k<=4;k++){d.beginPath();d.moveTo(k*40,0);d.lineTo(k*40,160);d.moveTo(0,k*40);d.lineTo(160,k*40);d.stroke()}
+  d.strokeStyle='#0e9aa7';d.lineWidth=2;
+  for(let cell=0;cell<16;cell++){
+    const cx=(cell%4)*40+20,cy=Math.floor(cell/4)*40+20;
+    for(let b=0;b<8;b++){
+      const a=(b+.5)*Math.PI/4,len=desc[cell*8+b]/mxv*17;
+      d.beginPath();d.moveTo(cx,cy);d.lineTo(cx+Math.cos(a)*len,cy+Math.sin(a)*len);d.stroke();
+    }
+  }
+
+  /* text */
+  const hist=new Float32Array(8);for(let k=0;k<128;k++)hist[k%8]+=desc[k];
+  const dom=hist.indexOf(Math.max(...hist));
+  $('descText').innerHTML=
+    '<b>Keypoint K'+(c._sel+1)+'</b> at location ('+kx+', '+ky+')'+
+    '<br><b>Descriptor length:</b> 128 values (16 cells × 8 orientation bins)'+
+    '<br><b>Dominant orientation:</b> '+(dom*45)+'° to '+((dom+1)*45)+'°'+
+    '<br><b>Values of the first cell:</b><br><code>['+Array.from(desc.slice(0,8)).map(v=>v.toFixed(2)).join(', ')+']</code>'+
+    '<p style="color:var(--muted);margin:10px 0 0">The keypoint says <i>where</i> the feature is. The descriptor says <i>what</i> it looks like: each cell stores a histogram of gradient directions around the keypoint. Matching compares two such vectors using Euclidean distance. (This simplified version skips rotation and scale normalization.)</p>';
+}
+
+$('cKey').onclick=e=>{
+  const c=$('cKey'),b=c.getBoundingClientRect(),s=c.width/b.width,x=(e.clientX-b.left)*s,y=(e.clientY-b.top)*s;
+  let best=-1,bd=900;
+  c._pts.forEach(([px,py],i)=>{const dd=(px-x)**2+(py-y)**2;if(dd<bd){bd=dd;best=i}});
+  if(best>=0){c._sel=best;keypoints()}
+};
+$('ksens').oninput=()=>keypoints();$('kbtn').onclick=()=>keypoints(true);keypoints(true);
+
+/* ---------- BFMatcher ---------- */
+const MC=$('cMatch'),mg=MC.getContext('2d'),NK=6,BITS=16;let A=[],B=[];
+const hamming=(a,b)=>{let x=a^b,c=0;while(x){c+=x&1;x>>=1}return c};
+const bin=v=>v.toString(2).padStart(BITS,'0');
+function newBF(){
+  A=[];B=[];for(let i=0;i<NK;i++)A.push({d:Math.floor(Math.random()*65536),y:30+i*48});
+  const order=[...Array(NK).keys()].sort(()=>Math.random()-.5);
+  B=order.map((src,i)=>{let d=A[src].d;const flips=new Set;while(flips.size<+$('noise').value)flips.add(Math.floor(Math.random()*BITS));flips.forEach(b=>d^=1<<b);return{d,y:30+i*48,src}});
+  drawMatch(null);
+}
+function drawMatch(res){
+  mg.clearRect(0,0,MC.width,MC.height);mg.font='12px ui-monospace,Consolas,monospace';
+  A.forEach((a,i)=>{mg.fillStyle='#0e9aa7';mg.beginPath();mg.arc(130,a.y,8,0,7);mg.fill();mg.fillStyle='#1e293b';mg.textAlign='right';mg.fillText('A'+(i+1)+'  '+bin(a.d),115,a.y+4)});
+  B.forEach((b,i)=>{mg.fillStyle='#e8651a';mg.beginPath();mg.arc(510,b.y,8,0,7);mg.fill();mg.fillStyle='#1e293b';mg.textAlign='left';mg.fillText('B'+(i+1)+'  '+bin(b.d),525,b.y+4)});
+  if(res)res.forEach(m=>{mg.strokeStyle=m.ok?'#16a34a':'#dc2626';mg.lineWidth=2.2;mg.beginPath();mg.moveTo(138,A[m.a].y);mg.lineTo(502,B[m.b].y);mg.stroke()});
+}
+function clearMatch(){$('distTable').innerHTML='';$('matchInfo').innerHTML='<b>Figure 5.</b> Descriptors of image A (left) and image B (right).'}
+$('runBF').onclick=()=>{
+  const res=[];let html='<tr><th>Hamming distance</th>'+B.map((_,i)=>'<th>B'+(i+1)+'</th>').join('')+'<th>Best match</th></tr>';
+  A.forEach((a,i)=>{
+    const ds=B.map(b=>hamming(a.d,b.d));let best=0;ds.forEach((d,j)=>{if(d<ds[best])best=j});
+    res.push({a:i,b:best,ok:B[best].src===i});
+    html+='<tr><th>A'+(i+1)+'</th>'+ds.map((d,j)=>'<td style="'+(j===best?'background:#dbeafe;font-weight:700':'')+'">'+d+'</td>').join('')+'<td style="color:'+(res[i].ok?'#16a34a':'#dc2626')+';font-weight:600">B'+(best+1)+(res[i].ok?' (correct)':' (incorrect)')+'</td></tr>';
+  });
+  drawMatch(res);$('distTable').innerHTML=html;
+  $('matchInfo').innerHTML='<b>Figure 5.</b> '+NK*NK+' descriptor pairs compared; '+res.filter(m=>m.ok).length+' of '+NK+' matches correct.';
+};
+$('noise').oninput=()=>{$('noisev').textContent=$('noise').value;newBF();clearMatch()};
+$('newBF').onclick=()=>{newBF();clearMatch()};newBF();
+
+/* ---------- quiz ---------- */
+const Q=[
+ ['What is an edge?',['A boundary between regions with different pixel intensities','A region with uniform color','A noisy pixel','A smoothing filter'],0],
+ ['Compared with smoothing, sharpening…',['Reduces details','Emphasizes edges and fine details','Removes all edges','Converts the image to binary'],1],
+ ['Which mask is used for point detection?',['Laplacian','Averaging','Median','Histogram'],0],
+ ['Sobel and Prewitt are which kind of edge detector?',['Second derivative','First derivative','Region growing','Thresholding'],1],
+ ['N8 connectivity checks…',['Only the 4 direct neighbors','All 8 surrounding pixels, including diagonals','Only the diagonals','The seed only'],1],
+ ['Split and merge begins by…',['Merging all pixels','Choosing seeds','Splitting non-uniform regions into quadrants','Detecting corners'],2],
+ ['Keypoints tell us…',['What a feature looks like','Where interesting features are located','The image size','The file format'],1],
+ ['Which distance suits binary descriptors such as ORB?',['Euclidean','Hamming','Manhattan only','Cosine only'],1],
+ ['The Brute-Force Matcher compares…',['Only neighboring descriptors','Random descriptors','Every descriptor of image 1 with every descriptor of image 2','Raw pixels directly'],2],
+ ['Which method is a faster alternative to SIFT?',['SURF','HOG','Laplacian','Sobel'],0]
+];
+let qi=0,score=0;
+function showQ(){
+  $('qbar').style.width=(qi/Q.length*100)+'%';
+  if(qi>=Q.length){
+    const msg=score>=9?'Excellent. You have mastered this lab.':score>=6?'Good work. Review the questions you missed.':'Review the lab sheet and try again.';
+    $('qbox').innerHTML='<div class="score"><div class="n">'+score+' / '+Q.length+'</div><p>'+msg+'</p><button onclick="qi=0;score=0;showQ()">Retake quiz</button></div>';return;
+  }
+  const q=Q[qi];
+  $('qbox').innerHTML='<div style="color:var(--muted);font-size:.85rem">Question '+(qi+1)+' of '+Q.length+'</div><h3 style="margin-top:4px">'+q[0]+'</h3>'+q[1].map((o,i)=>'<button class="opt" data-i="'+i+'">'+o+'</button>').join('');
+  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i;document.querySelectorAll('.opt').forEach(x=>x.onclick=null);
+    if(i===q[2]){b.classList.add('good');score++}else{b.classList.add('bad');document.querySelectorAll('.opt')[q[2]].classList.add('good')}
+    setTimeout(()=>{qi++;showQ()},1100);
+  });
+}
+showQ();
+</script>
+</body>
+</html>
