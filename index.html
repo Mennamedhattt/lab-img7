@@ -189,25 +189,12 @@ footer b{color:#fff}
       <div class="item o"><b>Descriptors</b>Numerical representations of the region around each keypoint, describing <u>what</u> it looks like.</div>
     </div>
     <div class="callout info">Example, recognizing a person. Keypoint: the location of the eyes, nose and mouth. Descriptor: the shape and surrounding appearance at those locations.</div>
-    <h3>Interactive demo: keypoints and descriptors</h3>
+    <h3>Interactive demo: corner keypoint detection</h3>
     <div class="ctrl">
       <label>Sensitivity <input type="range" id="ksens" min="1" max="100" value="55"></label>
       <button id="kbtn" class="ghost">Generate new shapes</button>
     </div>
-    <div class="row"><figure><canvas id="cKey" width="420" height="300" style="cursor:pointer"></canvas><figcaption id="kinfo"><b>Figure 4a.</b></figcaption></figure></div>
-    <div class="panel" id="descPanel">
-      <div class="row" style="align-items:center">
-        <figure>
-          <canvas id="cPatch" width="160" height="160"></canvas>
-          <figcaption><b>Figure 4b.</b> 16×16 patch around the selected keypoint</figcaption>
-        </figure>
-        <figure>
-          <canvas id="cDesc" width="160" height="160" style="background:#fff"></canvas>
-          <figcaption><b>Figure 4c.</b> Descriptor: 4×4 cells × 8 orientations</figcaption>
-        </figure>
-        <div id="descText" style="flex:1;min-width:240px;font-size:.92rem"></div>
-      </div>
-    </div>
+    <div class="row"><figure><canvas id="cKey" width="420" height="300"></canvas><figcaption id="kinfo"><b>Figure 4.</b></figcaption></figure></div>
     <h3>Process</h3>
     <div class="grid">
       <div class="item"><b>1. Keypoint detection</b>Identify interesting locations in the image.</div>
@@ -385,10 +372,10 @@ GC.onclick=e=>{
 $('tol').oninput=()=>$('tolv').textContent=$('tol').value;
 $('clearGrow').onclick=()=>{clearInterval(grTimer);region=null;drawGrid();$('growInfo').innerHTML='<b>Figure 3.</b> Click a cell to set the seed.'};drawGrid();
 
-/* ---------- keypoints + descriptors ---------- */
+/* ---------- keypoints (Harris) ---------- */
 function keypoints(regen){
   const c=$('cKey'),g=c.getContext('2d'),w=c.width,h=c.height,r=rng(Math.floor(Math.random()*1e6));
-  if(!c._shapes||regen){c._shapes=[];c._sel=0;for(let i=0;i<5;i++)c._shapes.push({t:i%3,x:60+r()*300,y:50+r()*200,s:25+r()*25,a:r()*1.2})}
+  if(!c._shapes||regen){c._shapes=[];for(let i=0;i<5;i++)c._shapes.push({t:i%3,x:60+r()*300,y:50+r()*200,s:25+r()*25,a:r()*1.2})}
   g.fillStyle='#202020';g.fillRect(0,0,w,h);g.fillStyle='#eee';
   c._shapes.forEach(s=>{g.save();g.translate(s.x,s.y);g.rotate(s.a);
     if(s.t===0)g.fillRect(-s.s,-s.s/1.5,s.s*2,s.s*1.3);
@@ -400,81 +387,9 @@ function keypoints(regen){
   for(let y=3;y<h-3;y++)for(let x=3;x<w-3;x++){let a=0,b=0,cc=0;for(let j=-2;j<=2;j++)for(let i=-2;i<=2;i++){const p=(y+j)*w+x+i,ix=gr[p+1]-gr[p-1],iy=gr[p+w]-gr[p-w];a+=ix*ix;b+=iy*iy;cc+=ix*iy}R[y*w+x]=a*b-cc*cc-.05*(a+b)**2;mx=Math.max(mx,R[y*w+x])}
   const th=mx*(1-$('ksens').value/100)*.35+mx*.02,pts=[];
   for(let y=4;y<h-4;y++)for(let x=4;x<w-4;x++){const v=R[y*w+x];if(v<th)continue;let ok=true;for(let j=-6;j<=6&&ok;j++)for(let i=-6;i<=6;i++)if(R[(y+j)*w+x+i]>v){ok=false;break}if(ok)pts.push([x,y])}
-  c._pts=pts;c._gr=gr;if(c._sel>=pts.length)c._sel=0;
-  pts.forEach(([x,y],i)=>{
-    const on=i===c._sel;
-    g.strokeStyle=on?'#22d3ee':'#f59e0b';g.lineWidth=on?3:2;
-    g.beginPath();g.arc(x,y,on?9:7,0,7);g.stroke();
-    g.fillStyle='#22d3ee';g.fillRect(x-1.5,y-1.5,3,3);
-    g.fillStyle='#fff';g.font='bold 11px sans-serif';g.fillText('K'+(i+1),x+10,y-8);
-  });
-  $('kinfo').innerHTML='<b>Figure 4a.</b> '+pts.length+' keypoints detected. Click a keypoint to view its descriptor.';
-  showDescriptor();
+  pts.forEach(([x,y])=>{g.strokeStyle='#f59e0b';g.lineWidth=2;g.beginPath();g.arc(x,y,7,0,7);g.stroke();g.fillStyle='#22d3ee';g.fillRect(x-1.5,y-1.5,3,3)});
+  $('kinfo').innerHTML='<b>Figure 4.</b> '+pts.length+' keypoints detected (circles mark corner locations)';
 }
-
-function computeDescriptor(c,kx,ky){
-  const gr=c._gr,w=c.width,h=c.height;let desc=new Float32Array(128);
-  for(let j=0;j<16;j++)for(let i=0;i<16;i++){
-    const x=kx-8+i,y=ky-8+j;
-    if(x<1||y<1||x>=w-1||y>=h-1)continue;
-    const gx=gr[y*w+x+1]-gr[y*w+x-1],gy=gr[(y+1)*w+x]-gr[(y-1)*w+x];
-    const mag=Math.hypot(gx,gy);if(!mag)continue;
-    let ang=Math.atan2(gy,gx);if(ang<0)ang+=2*Math.PI;
-    const bin=Math.min(7,Math.floor(ang/(2*Math.PI)*8));
-    const cell=Math.floor(j/4)*4+Math.floor(i/4);
-    desc[cell*8+bin]+=mag;
-  }
-  let n=Math.hypot(...desc)||1;desc=desc.map(v=>Math.min(v/n,.2));   /* normalize and clip */
-  n=Math.hypot(...desc)||1;return desc.map(v=>v/n);
-}
-
-function showDescriptor(){
-  const c=$('cKey'),p=$('cPatch').getContext('2d'),d=$('cDesc').getContext('2d');
-  p.clearRect(0,0,160,160);d.clearRect(0,0,160,160);
-  if(!c._pts.length){$('descText').innerHTML='No keypoints detected. Increase the sensitivity.';return}
-  const [kx,ky]=c._pts[c._sel],gr=c._gr,w=c.width,h=c.height;
-
-  /* patch */
-  const off=document.createElement('canvas');off.width=16;off.height=16;
-  const oc=off.getContext('2d'),id=oc.createImageData(16,16);
-  for(let j=0;j<16;j++)for(let i=0;i<16;i++){
-    const x=kx-8+i,y=ky-8+j,v=(x>=0&&y>=0&&x<w&&y<h)?gr[y*w+x]:0,k=(j*16+i)*4;
-    id.data[k]=id.data[k+1]=id.data[k+2]=v;id.data[k+3]=255;
-  }
-  oc.putImageData(id,0,0);p.imageSmoothingEnabled=false;p.drawImage(off,0,0,160,160);
-  p.strokeStyle='rgba(245,158,11,.85)';p.lineWidth=1;
-  for(let k=1;k<4;k++){p.beginPath();p.moveTo(k*40,0);p.lineTo(k*40,160);p.moveTo(0,k*40);p.lineTo(160,k*40);p.stroke()}
-
-  /* descriptor visualization */
-  const desc=computeDescriptor(c,kx,ky),mxv=Math.max(...desc)||1;
-  d.strokeStyle='#cbd5e1';d.lineWidth=1;
-  for(let k=0;k<=4;k++){d.beginPath();d.moveTo(k*40,0);d.lineTo(k*40,160);d.moveTo(0,k*40);d.lineTo(160,k*40);d.stroke()}
-  d.strokeStyle='#0e9aa7';d.lineWidth=2;
-  for(let cell=0;cell<16;cell++){
-    const cx=(cell%4)*40+20,cy=Math.floor(cell/4)*40+20;
-    for(let b=0;b<8;b++){
-      const a=(b+.5)*Math.PI/4,len=desc[cell*8+b]/mxv*17;
-      d.beginPath();d.moveTo(cx,cy);d.lineTo(cx+Math.cos(a)*len,cy+Math.sin(a)*len);d.stroke();
-    }
-  }
-
-  /* text */
-  const hist=new Float32Array(8);for(let k=0;k<128;k++)hist[k%8]+=desc[k];
-  const dom=hist.indexOf(Math.max(...hist));
-  $('descText').innerHTML=
-    '<b>Keypoint K'+(c._sel+1)+'</b> at location ('+kx+', '+ky+')'+
-    '<br><b>Descriptor length:</b> 128 values (16 cells × 8 orientation bins)'+
-    '<br><b>Dominant orientation:</b> '+(dom*45)+'° to '+((dom+1)*45)+'°'+
-    '<br><b>Values of the first cell:</b><br><code>['+Array.from(desc.slice(0,8)).map(v=>v.toFixed(2)).join(', ')+']</code>'+
-    '<p style="color:var(--muted);margin:10px 0 0">The keypoint says <i>where</i> the feature is. The descriptor says <i>what</i> it looks like: each cell stores a histogram of gradient directions around the keypoint. Matching compares two such vectors using Euclidean distance. (This simplified version skips rotation and scale normalization.)</p>';
-}
-
-$('cKey').onclick=e=>{
-  const c=$('cKey'),b=c.getBoundingClientRect(),s=c.width/b.width,x=(e.clientX-b.left)*s,y=(e.clientY-b.top)*s;
-  let best=-1,bd=900;
-  c._pts.forEach(([px,py],i)=>{const dd=(px-x)**2+(py-y)**2;if(dd<bd){bd=dd;best=i}});
-  if(best>=0){c._sel=best;keypoints()}
-};
 $('ksens').oninput=()=>keypoints();$('kbtn').onclick=()=>keypoints(true);keypoints(true);
 
 /* ---------- BFMatcher ---------- */
